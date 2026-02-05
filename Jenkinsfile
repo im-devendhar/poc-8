@@ -20,7 +20,7 @@ pipeline {
         stage('Code Quality Analysis with SonarQube') {
             steps {
                 echo 'Running SonarQube analysis'
-                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                withSonarQubeEnv("${Sonar-Server}") {
                     sh 'sonar-scanner'
                 }
             }
