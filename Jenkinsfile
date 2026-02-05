@@ -2,10 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "poc-8"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
-        CONTAINER  = "poc-8"
-        SONARQUBE_SERVER = "sonarqube"
+        IMAGE_NAME       = "poc-8"
+        IMAGE_TAG        = "${BUILD_NUMBER}"
+        CONTAINER        = "poc-8"
+        SONARQUBE_SERVER = "sonarqube"   // Jenkins -> Manage Jenkins -> Configure System -> SonarQube servers (Name)
+        SONAR_SCANNER    = "SonarScanner" // Jenkins -> Global Tool Configuration -> SonarScanner (Name)
     }
 
     stages {
@@ -20,8 +21,25 @@ pipeline {
         stage('Code Quality Analysis with SonarQube') {
             steps {
                 echo 'Running SonarQube analysis'
-                withSonarQubeEnv("${Sonar-Server}") {
-                    sh 'sonar-scanner'
+                script {
+                    def scannerHome = tool "${SONAR_SCANNER}"
+                    withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                        sh """
+                          ${scannerHome}/bin/sonar-scanner \
+                          -Dsonar.projectKey=poc-8 \
+                          -Dsonar.projectName=poc-8 \
+                          -Dsonar.sources=.
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                echo "Waiting for SonarQube Quality Gate result..."
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -56,7 +74,7 @@ pipeline {
             echo 'CI/CD Pipeline executed successfully'
         }
         failure {
-            echo ' Pipeline failed. Check logs.'
+            echo 'Pipeline failed. Check logs.'
         }
     }
 }
