@@ -8,7 +8,7 @@ pipeline {
 
         SONARQUBE_SERVER = "Sonar-Server"
         SONAR_SCANNER    = "POC-8-Scan"
-        SONAR_PROJECT_KEY = "POC-8-Scan"
+        SONAR_PROJECT_KEY = "POC-8-DevOps"
     }
 
     stages {
