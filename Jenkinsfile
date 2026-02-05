@@ -1,12 +1,6 @@
 pipeline {
     agent any
 
-    options {
-        timestamps()
-        disableConcurrentBuilds()
-        ansiColor('xterm')
-    }
-
     environment {
         // Docker settings
         IMAGE_NAME = "poc-8"
