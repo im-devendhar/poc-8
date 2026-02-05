@@ -1,38 +1,57 @@
 pipeline {
     agent any
 
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        ansiColor('xterm')
+    }
+
     environment {
-        IMAGE_NAME       = "poc-8"
-        IMAGE_TAG        = "${BUILD_NUMBER}"
-        CONTAINER        = "poc-8"
+        // Docker settings
+        IMAGE_NAME = "poc-8"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+        CONTAINER  = "poc-8"
+        APP_PORT   = "8085"
 
-        // Must match: Manage Jenkins -> Configure System -> SonarQube servers -> Name
-        SONARQUBE_SERVER = "Sonar-Server"
+        // SonarQube (must match Jenkins configuration names)
+        SONARQUBE_SERVER = "Sonar-Server"   // Manage Jenkins -> Configure System -> SonarQube servers -> Name
+        SONAR_SCANNER    = "POC-8-Scan"      // Manage Jenkins -> Tools -> SonarQube Scanner installations -> Name
 
-        // Must match: Manage Jenkins -> Tools -> SonarQube Scanner installations -> Name
-        SONAR_SCANNER    = "POC-8-Scan"
+        // SonarQube project (IMPORTANT: use the real existing Project Key)
+        // Put the exact key shown in SonarQube dashboard URL: .../dashboard?id=<KEY>
+        SONAR_PROJECT_KEY  = "POC-8-DevOps"
+        SONAR_PROJECT_NAME = "POC-8-DevOps"
+
+        // If your repo has spaces in workspace path, scanner still works, but this is safe:
+        SONAR_SOURCES = "."
     }
 
     stages {
 
-        stage('Pull Code from GitHub') {
+        stage('Checkout (GitHub)') {
             steps {
-                echo 'Cloning source code from GitHub'
-                git branch: 'main', url: 'https://github.com/im-devendhar/poc-8.git'
+                echo "Checking out source code from GitHub..."
+                checkout([$class: 'GitSCM',
+                          branches: [[name: '*/main']],
+                          userRemoteConfigs: [[url: 'https://github.com/im-devendhar/poc-8.git']]
+                ])
             }
         }
 
-        stage('Code Quality Analysis with SonarQube') {
+        stage('SonarQube Scan') {
             steps {
-                echo 'Running SonarQube analysis'
+                echo "Running SonarQube analysis..."
                 script {
-                    def scannerHome = tool "${SONAR_SCANNER}"
+                    // Explicit type improves tool resolution reliability
+                    def scannerHome = tool name: "${SONAR_SCANNER}", type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+
                     withSonarQubeEnv("${SONARQUBE_SERVER}") {
                         sh """
                           ${scannerHome}/bin/sonar-scanner \
-                          -Dsonar.projectKey=poc-8 \
-                          -Dsonar.projectName=poc-8 \
-                          -Dsonar.sources=.
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                            -Dsonar.sources=${SONAR_SOURCES}
                         """
                     }
                 }
@@ -50,35 +69,43 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image'
+                echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy (Docker)') {
             steps {
-                echo 'Deploying application using Docker'
+                echo "Deploying application container on port ${APP_PORT}..."
                 sh """
                   docker rm -f ${CONTAINER} || true
-                  docker run -d -p 8085:80 --name ${CONTAINER} ${IMAGE_NAME}:${IMAGE_TAG}
+                  docker run -d --restart unless-stopped \
+                    -p ${APP_PORT}:80 \
+                    --name ${CONTAINER} \
+                    ${IMAGE_NAME}:${IMAGE_TAG}
                 """
             }
         }
 
-        stage('Cleanup Old Images (Optional)') {
+        stage('Cleanup (Optional)') {
             steps {
-                echo "Cleaning unused Docker images"
-                sh "docker image prune -f"
+                echo "Cleaning unused Docker images..."
+                sh "docker image prune -f || true"
             }
         }
     }
 
     post {
         success {
-            echo 'CI/CD Pipeline executed successfully'
+            echo "✅ CI/CD Pipeline executed successfully!"
+            echo "App should be available at: http://<JENKINS_SERVER_PUBLIC_IP>:${APP_PORT}"
         }
         failure {
-            echo 'Pipeline failed. Check logs.'
+            echo "❌ Pipeline failed. Please check the console output logs."
+        }
+        always {
+            echo "Pipeline finished at: ${new Date()}"
         }
     }
 }
+``
