@@ -10,7 +10,7 @@ pipeline {
         SONARQUBE_SERVER = "Sonar-Server"
 
         // Must match: Manage Jenkins -> Tools -> SonarQube Scanner installations -> Name
-        SONAR_SCANNER    = "POC-8-scan"
+        SONAR_SCANNER    = "POC-8-Scan"
     }
 
     stages {
