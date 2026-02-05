@@ -5,8 +5,12 @@ pipeline {
         IMAGE_NAME       = "poc-8"
         IMAGE_TAG        = "${BUILD_NUMBER}"
         CONTAINER        = "poc-8"
-        SONARQUBE_SERVER = "sonarqube"   // Jenkins -> Manage Jenkins -> Configure System -> SonarQube servers (Name)
-        SONAR_SCANNER    = "SonarScanner" // Jenkins -> Global Tool Configuration -> SonarScanner (Name)
+
+        // Must match: Manage Jenkins -> Configure System -> SonarQube servers -> Name
+        SONARQUBE_SERVER = "Sonar-Server"
+
+        // Must match: Manage Jenkins -> Tools -> SonarQube Scanner installations -> Name
+        SONAR_SCANNER    = "POC-8-scan"
     }
 
     stages {
